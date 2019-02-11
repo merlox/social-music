@@ -1,5 +1,5 @@
-var Migrations = artifacts.require("./Migrations.sol");
+const SocialMusic = artifacts.require("./SocialMusic.sol")
 
 module.exports = function(deployer) {
-  deployer.deploy(Migrations);
-};
+  deployer.deploy(SocialMusic)
+}
