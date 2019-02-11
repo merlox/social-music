@@ -20,3 +20,32 @@ button:hover {
 .buttons-container button:not(:last-child){
     margin-right: 5px;
 }
+
+.recommendation {
+    width: 40%;
+    margin: auto;
+    background-color: whitesmoke;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    padding: 40px;
+}
+
+.recommendation-name, .recommendation-address {
+    display: inline-block;
+    color: #444444;
+    font-style: italic;
+}
+
+.recommendation-name {
+    margin-right: 10px;
+}
+
+.recommendation-address {
+    color: rgb(156, 156, 156);
+}
+
+.recommendation-song {
+    font-weight: bolder;
+    font-size: 16pt;
+    margin-top: 10px;
+}

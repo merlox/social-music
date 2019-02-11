@@ -23,6 +23,7 @@
     "react-dom": "^16.8.1",
     "style-loader": "^0.23.1",
     "truffle-hdwallet-provider": "^1.0.3",
+    "web3": "^1.0.0-beta.46",
     "webpack": "^4.29.3",
     "webpack-cli": "^3.2.3"
   }
