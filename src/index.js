@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import myWEB3 from 'web3'
 import './index.css'
-import ABI from './SocialMusic.json'
+import ABI from '../build/contracts/SocialMusic.json'
 
 class Main extends React.Component {
     constructor() {
@@ -10,28 +10,26 @@ class Main extends React.Component {
 
         window.myWeb3 = new myWEB3(myWEB3.givenProvider)
         this.state = {
-            isFormHidden: true
+            isFormHidden: true,
+            isAddMusicHidden: true,
+            isFollowPeopleHidden: true,
+            followUsersData: [],
+            userAddress: ''
         }
 
         this.setContractInstance()
     }
 
-    async getAccount() {
-        return (await myWeb3.eth.getAccounts())[0]
-    }
-
     async setContractInstance() {
-        const contractAddress = '0x0217ED41bC271a712f91477c305957Da44f91068'
+        const contractAddress = ABI.networks['3'].address
         const abi = ABI.abi
+        const userAddress = (await myWeb3.eth.getAccounts())[0]
+        await this.setState({userAddress})
         const contractInstance = new myWeb3.eth.Contract(abi, contractAddress, {
-            from: await this.getAccount(),
+            from: this.state.userAddress,
             gasPrice: 2e9
         })
         await this.setState({contractInstance: contractInstance})
-    }
-
-    async setupAccount(name, age, status) {
-        await this.state.contractInstance.methods.setup(this.fillBytes32WithSpaces(name), age, status).send({from: '0x2f6ccd575FA71e2912a31b65F7aFF45C8bf91155'})
     }
 
     fillBytes32WithSpaces(name) {
@@ -42,6 +40,51 @@ class Main extends React.Component {
         return nameHex
     }
 
+    hideAllSections() {
+        this.setState({
+            isFormHidden: true,
+            isAddMusicHidden: true,
+            isFollowPeopleHidden: true
+        })
+    }
+
+    async setupAccount(name, age, status) {
+        await this.state.contractInstance.methods.setup(this.fillBytes32WithSpaces(name), age, status).send({from: this.state.userAddress})
+    }
+
+    async addMusic(music) {
+        await this.state.contractInstance.methods.addSong(music).send({from: this.state.userAddress})
+    }
+
+    async getFollowPeopleUsersData() {
+        let userAddresses = await this.state.contractInstance.methods.getUsersList().call({from: this.state.userAddress})
+
+        // The user object array contains objects like so userObject = {address, name, age, state, recommendations[2]}
+        let usersObjects = []
+
+        // Return only the latest 10 users with only 2 recommendations for each, ignore the rest to avoid getting a gigantic list
+        if(userAddresses.length > 10) userAddresses = userAddresses.slice(0, 10)
+        for(let i = 0; i < userAddresses.length; i++) {
+            let {age, name, state} = await this.state.contractInstance.methods.users(userAddresses[i]).call({from: this.state.userAddress})
+            let userData = {
+                address: userAddresses[i],
+                age,
+                name,
+                state,
+                recommendations: []
+            }
+            let usersMusicRecommendationLength = await this.state.contractInstance.methods.getUsersMusicRecommendationLength(userAddresses[i]).call({from: this.state.userAddress})
+            // We only want to get the 2 latests music recommendations of each user
+            if(usersMusicRecommendationLength > 2) usersMusicRecommendationLength = 2
+            for(let a = 0; a < usersMusicRecommendationLength; a++) {
+                const recommendation = await this.state.contractInstance.methods.getUsersMusicRecommendation(userAddresses[i], a).call({from: this.state.userAddress})
+                userData.recommendations.push(recommendation)
+            }
+            usersObjects.push(userData)
+        }
+        await this.setState({followUsersData: usersObjects})
+    }
+
     render() {
         return (
             <div>
@@ -49,11 +92,21 @@ class Main extends React.Component {
                 <p>Setup your account, start adding musical recommendations for your friends and follow people that may interest you</p>
                 <div className="buttons-container">
                     <button onClick={() => {
+                        this.hideAllSections()
                         if(this.state.isFormHidden) this.setState({isFormHidden: false})
                         else this.setState({isFormHidden: true})
                     }}>Setup Account</button>
-                    <button>Add Music</button>
-                    <button>Follow People</button>
+                    <button onClick={() => {
+                        this.hideAllSections()
+                        if(this.state.isAddMusicHidden) this.setState({isAddMusicHidden: false})
+                        else this.setState({isAddMusicHidden: true})
+                    }}>Add Music</button>
+                    <button onClick={() => {
+                        this.hideAllSections()
+                        if(this.state.isFollowPeopleHidden) this.setState({isFollowPeopleHidden: false})
+                        else this.setState({isFollowPeopleHidden: true})
+                        this.getFollowPeopleUsersData()
+                    }}>Follow People</button>
                 </div>
 
                 <Form
@@ -64,6 +117,24 @@ class Main extends React.Component {
                     setupAccount={(name, age, status) => {
                         this.setupAccount(name, age, status)
                     }}
+                />
+
+                <AddMusic
+                    className={this.state.isAddMusicHidden ? 'hidden': ''}
+                    cancel={() => {
+                        this.setState({isAddMusicHidden: true})
+                    }}
+                    addMusic={music => {
+                        this.addMusic(music)
+                    }}
+                />
+
+                <FollowPeopleContainer
+                    className={this.state.isFollowPeopleHidden ? 'hidden': ''}
+                    close={() => {
+                        this.setState({isFollowPeopleHidden: true})
+                    }}
+                    followUsersData={this.state.followUsersData}
                 />
 
                 <h3>Latest musical recommendations from people using the dApp</h3>
@@ -137,6 +208,76 @@ class Form extends React.Component {
                     }}>Submit</button>
                 </div>
             </form>
+        )
+    }
+}
+
+class AddMusic extends React.Component {
+    constructor() {
+        super()
+    }
+
+    render() {
+        return(
+            <div className={this.props.className}>
+                <input type="text" ref="add-music-input" className="form-input" placeholder="Your song recommendation"/>
+                <div>
+                    <button onClick={event => {
+                        event.preventDefault()
+                        this.props.cancel()
+                    }} className="cancel-button">Cancel</button>
+                    <button onClick={event => {
+                        event.preventDefault()
+                        this.props.addMusic(this.refs['add-music-input'].value)
+                    }}>Submit</button>
+                </div>
+            </div>
+        )
+    }
+}
+
+class FollowPeopleContainer extends React.Component {
+    constructor() {
+        super()
+    }
+
+    render() {
+        return (
+            <div className="follow-people-container">
+                {this.props.followUsersData.map(user => (
+                    <FollowPeopleUnit
+                        key={user.address}
+                        address={user.addres}
+                        age={user.age}
+                        name={user.name}
+                        state={user.state}
+                        recommendations={user.recommendations}
+                    />
+                ))}
+            </div>
+        )
+    }
+}
+
+class FollowPeopleUnit extends React.Component {
+    constructor() {
+        super()
+    }
+
+    render() {
+        return (
+            <div className="follow-people-unit">
+                <div className="follow-people-address">{this.props.address}</div>
+                <div className="follow-people-name">{myWeb3.utils.toUtf8(this.props.name)}</div>
+                <div className="follow-people-age">{this.props.age}</div>
+                <div className="follow-people-state">"{this.props.state}"</div>
+                <div className="follow-people-recommendation-container">
+                    {this.props.recommendations.map((message, index) => (
+                        <div key={index} className="follow-people-recommendation">{message}</div>
+                    ))}
+                </div>
+                <button>Follow</button>
+            </div>
         )
     }
 }
