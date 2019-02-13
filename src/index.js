@@ -59,7 +59,7 @@ class Main extends React.Component {
     async getFollowPeopleUsersData() {
         let userAddresses = await this.state.contractInstance.methods.getUsersList().call({from: this.state.userAddress})
 
-        // The user object array contains objects like so userObject = {address, name, age, state, recommendations[2]}
+        // The user object array contains objects like so userObject = {address, name, age, state, recommendations[2], following[]}
         let usersObjects = []
 
         // Return only the latest 10 users with only 2 recommendations for each, ignore the rest to avoid getting a gigantic list
@@ -71,7 +71,8 @@ class Main extends React.Component {
                 age,
                 name,
                 state,
-                recommendations: []
+                recommendations: [],
+                following: []
             }
             let usersMusicRecommendationLength = await this.state.contractInstance.methods.getUsersMusicRecommendationLength(userAddresses[i]).call({from: this.state.userAddress})
             // We only want to get the 2 latests music recommendations of each user
@@ -80,9 +81,15 @@ class Main extends React.Component {
                 const recommendation = await this.state.contractInstance.methods.getUsersMusicRecommendation(userAddresses[i], a).call({from: this.state.userAddress})
                 userData.recommendations.push(recommendation)
             }
+            let following = await this.state.contractInstance.methods.getUsersFollowings(userAddresses[i]).call({from: this.state.userAddress})
+            userData.following = following
             usersObjects.push(userData)
         }
         await this.setState({followUsersData: usersObjects})
+    }
+
+    async followUser(address) {
+        await this.state.contractInstance.methods.follow(address).send({from: this.state.userAddress})
     }
 
     render() {
@@ -130,11 +137,15 @@ class Main extends React.Component {
                 />
 
                 <FollowPeopleContainer
-                    className={this.state.isFollowPeopleHidden ? 'hidden': ''}
+                    className={this.state.isFollowPeopleHidden ? 'hidden': 'follow-people-container'}
                     close={() => {
                         this.setState({isFollowPeopleHidden: true})
                     }}
+                    userAddress={this.state.userAddress}
                     followUsersData={this.state.followUsersData}
+                    followUser={address => {
+                        this.followUser(address)
+                    }}
                 />
 
                 <h3>Latest musical recommendations from people using the dApp</h3>
@@ -242,9 +253,17 @@ class FollowPeopleContainer extends React.Component {
     }
 
     render() {
+        let followData = this.props.followUsersData
+        // Remove the users that you already follow so that you don't see em
+        for(let i = 0; i < followData.length; i++) {
+            let indexOfFollowing = followData[i].following.indexOf(this.props.userAddress)
+            if(indexOfFollowing != -1) {
+                followData = followData.splice(indexOfFollowing, 1)
+            }
+        }
         return (
-            <div className="follow-people-container">
-                {this.props.followUsersData.map(user => (
+            <div className={this.props.className}>
+                {followData.map(user => (
                     <FollowPeopleUnit
                         key={user.address}
                         address={user.addres}
@@ -252,6 +271,10 @@ class FollowPeopleContainer extends React.Component {
                         name={user.name}
                         state={user.state}
                         recommendations={user.recommendations}
+                        following={user.following}
+                        followUser={() => {
+                            this.props.followUser(user.address)
+                        }}
                     />
                 ))}
             </div>
@@ -276,7 +299,12 @@ class FollowPeopleUnit extends React.Component {
                         <div key={index} className="follow-people-recommendation">{message}</div>
                     ))}
                 </div>
-                <button>Follow</button>
+                <button
+                    className="follow-button"
+                    onClick={() => {
+                        this.props.followUser()
+                    }}
+                >Follow</button>
             </div>
         )
     }

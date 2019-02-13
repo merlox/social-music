@@ -84,3 +84,7 @@ button:hover {
     font-weight: bolder;
     color: #444444;
 }
+
+.follow-button {
+    margin-top: 10px;
+}
