@@ -48,6 +48,10 @@ class Main extends React.Component {
         })
     }
 
+    async send(functionName, parameters) {
+        await this.state.contractInstance.methods[functionName](parameters).send({from: this.state.userAddress})
+    }
+
     async setupAccount(name, age, status) {
         await this.state.contractInstance.methods.setup(this.fillBytes32WithSpaces(name), age, status).send({from: this.state.userAddress})
     }
@@ -310,4 +314,4 @@ class FollowPeopleUnit extends React.Component {
     }
 }
 
-ReactDOM.render(<Main />, document.querySelector('#root'))
+ReactDOM.render(<Main ref={(myComponent) => {window.myComponent = myComponent}} />, document.querySelector('#root'))
