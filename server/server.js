@@ -15,7 +15,6 @@ if(!argv.port) {
 }
 const port = argv.port
 
-app.use(express.static(distFolder))
 app.use(bodyParser.json())
 
 app.use('*', (req, res, next) => {
@@ -24,6 +23,20 @@ app.use('*', (req, res, next) => {
 	console.log(`${req.method} to ${req.originalUrl} at ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
 	next()
 })
+
+// Compression request to send the valid build files
+app.get('build.js', (req, res) => {
+	if (req.header('Accept-Encoding').includes('br')) {
+		res.set('Content-Encoding', 'br')
+		res.set('Content-Type', 'application/javascript; charset=UTF-8')
+		res.sendFile(path.join(__dirname, 'dist', 'build.js.br'))
+	} else if(req.header('Accept-Encoding').includes('gz')) {
+		res.set('Content-Encoding', '.gz')
+		res.set('Content-Type', 'application/javascript; charset=UTF-8')
+		res.sendFile(path.join(__dirname, 'dist', 'build.js.gz'))
+	}
+})
+app.use(express.static(distFolder))
 
 app.get('bundle.js', (req, res) => {
     res.sendFile(path.join(distFolder, 'bundle.js'))
