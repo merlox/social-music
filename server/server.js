@@ -25,6 +25,14 @@ app.use('*', (req, res, next) => {
 	next()
 })
 
+app.get('*/build.js', (req, res) => {
+    res.sendFile(path.join(distFolder, 'bundle.js'))
+})
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(distFolder, 'index.html'))
+})
+
 app.listen(port, '0.0.0.0', (req, res) => {
     console.log(`Server listening on localhost:${port}`)
 })
