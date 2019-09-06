@@ -25,7 +25,7 @@ app.use('*', (req, res, next) => {
 	next()
 })
 
-app.get('*/bundle.js', (req, res) => {
+app.get('bundle.js', (req, res) => {
     res.sendFile(path.join(distFolder, 'bundle.js'))
 })
 
