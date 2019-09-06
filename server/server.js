@@ -15,7 +15,7 @@ if(!argv.port) {
 }
 const port = argv.port
 
-app.use(distFolder, express.static(distFolder))
+app.use(express.static(distFolder))
 app.use(bodyParser.json())
 
 app.use('*', (req, res, next) => {
@@ -23,12 +23,6 @@ app.use('*', (req, res, next) => {
 	let time = new Date()
 	console.log(`${req.method} to ${req.originalUrl} at ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
 	next()
-})
-app.get('*/bundle.js', (req, res) => {
-   res.sendFile(path.join(distFolder, 'bundle.js'))
-})
-app.get('*', (req, res) => {
-   res.sendFile(path.join(distFolder, 'index.html'))
 })
 
 app.listen(port, '0.0.0.0', (req, res) => {
